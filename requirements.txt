@@ -1,0 +1,4 @@
+kagglehub>=1.0
+numpy>=2.0
+scipy>=1.14
+implicit>=0.7.2

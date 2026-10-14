@@ -1,0 +1,8 @@
+# Local Python environment
+.venv/
+__pycache__/
+*.py[cod]
+
+# Downloaded data and experiment outputs
+data/
+outputs/
