@@ -116,6 +116,8 @@ def main() -> None:
     ).tocsr()
     interactions.sum_duplicates()
     interactions.sort_indices()
+    user_train_interaction_counts = np.diff(interactions.indptr)
+    users_with_history = user_train_interaction_counts[user_train_interaction_counts > 0]
 
     targets = coo_matrix(
         (np.ones(is_test.sum(), dtype=np.float32), (event_user_rows[is_test], event_item_cols[is_test])),
@@ -161,6 +163,14 @@ def main() -> None:
         "test_events": int(is_test.sum()),
         "cutoff_timestamp_ms": cutoff,
         "train_interaction_pairs": int(interactions.nnz),
+        "users_with_train_history": int(users_with_history.size),
+        "users_with_at_least_2_train_interactions": int(np.count_nonzero(user_train_interaction_counts >= 2)),
+        "users_with_at_least_5_train_interactions": int(np.count_nonzero(user_train_interaction_counts >= 5)),
+        "train_interactions_per_user_with_history": {
+            "median": float(np.median(users_with_history)) if users_with_history.size else 0.0,
+            "p25": float(np.quantile(users_with_history, 0.25)) if users_with_history.size else 0.0,
+            "p75": float(np.quantile(users_with_history, 0.75)) if users_with_history.size else 0.0,
+        },
         "test_target_pairs": int(targets.nnz),
         "event_level_availability_asof_coverage": float(np.mean(event_indices >= 0)),
         "catalog_availability_asof_coverage_at_cutoff": float(np.mean(known_cutoff)),
