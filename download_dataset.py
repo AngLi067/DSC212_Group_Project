@@ -1,18 +1,16 @@
-"""Download the Instacart Market Basket Analysis dataset with KaggleHub."""
+"""Download the Retailrocket e-commerce dataset with KaggleHub."""
 
 from pathlib import Path
 
 import kagglehub
 
 
-DATASET_HANDLE = "psparks/instacart-market-basket-analysis"
+DATASET_HANDLE = "retailrocket/ecommerce-dataset"
 EXPECTED_FILES = {
-    "orders.csv",
-    "products.csv",
-    "aisles.csv",
-    "departments.csv",
-    "order_products__prior.csv",
-    "order_products__train.csv",
+    "events.csv",
+    "item_properties_part1.csv",
+    "item_properties_part2.csv",
+    "category_tree.csv",
 }
 
 
@@ -27,7 +25,7 @@ def main() -> None:
         for name in missing:
             print(f"  - {name}")
     else:
-        print("All six expected CSV files are present.")
+        print("All expected dataset CSV files are present.")
 
 
 if __name__ == "__main__":

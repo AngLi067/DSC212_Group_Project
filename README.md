@@ -1,43 +1,53 @@
-# Inventory-Aware Recommendation
+# Availability-Aware E-Commerce Recommendation
 
-This project compares grocery product recommendation methods and studies how simulated product availability changes recommendation quality. Inventory availability is simulated because the Instacart Market Basket Analysis data does not include inventory snapshots.
-
-## Research question
-
-Can inventory-aware ranking reduce recommendations for simulated unavailable products while retaining useful recommendation quality? How does that trade-off change under different availability scenarios?
-
-## Planned methods
-
-- Popularity baseline trained from historical (`prior`) orders.
-- Implicit-feedback ALS trained from historical user-product interactions.
-- ALS recommendation lists reranked with simulated inventory risk, including hard filtering and risk-penalized ranking.
-
-## Planned evaluation
-
-Evaluate against held-out `train` orders using Recall@10, NDCG@10, catalog coverage, simulated unavailable-item recommendation rate, and a documented availability-adjusted Recall@10. Compare high-, medium-, and low-availability scenarios with fixed random seeds. No held-out order labels may be used to fit recommendation scores or generate inventory states.
+This project uses the Retailrocket e-commerce dataset to compare popularity and item-based recommendations, then measures how filtering products with a known unavailable state affects recommendation quality. The data has historical availability states, not physical inventory quantities.
 
 ## Data
 
-Expected CSV files:
+The four Kaggle CSV files belong in `data/raw/retailrocket/`:
 
-- `orders.csv`
-- `products.csv`
-- `aisles.csv`
-- `departments.csv`
-- `order_products__prior.csv`
-- `order_products__train.csv`
+- `events.csv`
+- `item_properties_part1.csv`
+- `item_properties_part2.csv`
+- `category_tree.csv`
 
-Keep source data out of version control unless the team has explicitly decided otherwise. The repository currently contains no dataset files; add or point the pipeline at the files before beginning the data audit.
+Raw and processed data are ignored by Git. To download the public dataset with KaggleHub:
 
-## Initial implementation sequence
+```bash
+.venv/bin/python download_dataset.py
+```
 
-1. Validate the input files, columns, keys, and user overlap between historical and held-out orders.
-2. Build a sparse historical user-product interaction matrix and a held-out target table.
-3. Implement and evaluate the popularity baseline.
-4. Implement ALS and generate comparable top-10 candidate lists.
-5. Add seeded availability scenarios and inventory-aware ranking policies.
-6. Compute metrics, plot trade-offs, and document assumptions and reproduction steps.
+The `available` property is 0 for unavailable and 1 for available. Missing states remain unknown.
 
-## Project status
+## Reproduce
 
-Setup in progress. The first code and data-audit files will be added incrementally, one at a time.
+Run these commands from the repository root:
+
+```bash
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python audit_data.py data/raw/retailrocket
+.venv/bin/python prepare_data.py data/raw/retailrocket
+.venv/bin/python recommendation_models.py data/processed
+.venv/bin/python -m unittest discover -s tests -v
+```
+
+`prepare_data.py` splits events chronologically (default 80% train) and creates weighted implicit interactions (view=1, add-to-cart=3, transaction=5), binary future targets, and an availability snapshot using the latest property timestamp at or before the training cutoff.
+
+`recommendation_models.py` compares global popularity with item-based cosine similarity. It reports Recall@10, NDCG@10, catalog coverage, unavailable-item exposure, unknown-state exposure, and runtime before and after filtering. Known unavailable products are removed; unknown products remain eligible. Global popularity fills any remaining Top 10 slots.
+
+## Outputs
+
+- `data/processed/metadata.json`: split counts, cutoff, and availability-state coverage.
+- `outputs/popularity/metrics.json`: popularity results.
+- `outputs/item_based_cosine/metrics.json`: item-based results.
+- `outputs/evaluation_summary.json`: shared evaluation context.
+- `AI_USAGE.md`: AI-tool usage log.
+
+Availability is evaluated at the fixed training cutoff. Results are offline and do not estimate physical inventory or causal sales impact.
+
+## Current run
+
+The chronological split contains 2,204,881 training events, 551,220 test events, and 24,735 evaluated visitors with both history and future targets. Historical availability can be matched at event time for 80.7% of all events; at the training cutoff it covers 77.7% of catalog items and 86.4% of test target pairs. Among test target pairs with a known state, 48.9% are marked unavailable.
+
+Item-based cosine reached Recall@10 0.1501 and NDCG@10 0.1397 before filtering. After removing known-unavailable items, Recall@10 was 0.0837 and NDCG@10 was 0.0791; known-unavailable recommendation exposure fell from 47.7% to 0%. These figures show a relevance-availability trade-off for this fixed cutoff, not a real-world sales effect.
